@@ -50,8 +50,8 @@ export default function Page() {
     <div className="flex min-h-svh w-full items-center justify-center bg-background p-6 md:p-10">
       <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-2 mb-4">
-            <GarageMark className="h-16 w-auto" />
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <GarageMark className="h-24 w-auto md:h-28" />
             <h1 className="text-xl font-semibold tracking-wide text-foreground">THE GARAGE</h1>
           </div>
           <Card className="border-border bg-card">
