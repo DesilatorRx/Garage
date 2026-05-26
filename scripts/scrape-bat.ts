@@ -171,11 +171,13 @@ async function main() {
 
   const rows: MarketSaleRow[] = []
   let pagesAvailable = PAGES_TO_FETCH
+  let pagesFetched = 0
 
   for (let page = 1; page <= Math.min(PAGES_TO_FETCH, pagesAvailable); page++) {
     console.log(`Fetching page ${page}…`)
     const data = await fetchPage(page)
     pagesAvailable = data.pages_total
+    pagesFetched++
     for (const item of data.items) {
       rows.push(toRow(item))
     }
@@ -184,7 +186,7 @@ async function main() {
     }
   }
 
-  console.log(`\nScraped ${rows.length} listings across ${Math.min(PAGES_TO_FETCH, pagesAvailable)} page(s).`)
+  console.log(`\nScraped ${rows.length} listings across ${pagesFetched} page(s) (API reported ${pagesAvailable} total).`)
 
   // Pagination on BaT overlaps slightly — newly-closed auctions push older ones
   // back, so the same id can land on consecutive pages within one run. Postgres
