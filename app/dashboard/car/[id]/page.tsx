@@ -10,7 +10,9 @@ import { PriceHistoryTable } from '@/components/price-history-table'
 import { AddPriceEntryForm } from '@/components/add-price-entry-form'
 import { CarDetailActions } from '@/components/car-detail-actions'
 import { MarketComps } from '@/components/market-comps'
+import { LaunchMSRPCard } from '@/components/launch-msrp-card'
 import { getCompsForCar } from '@/lib/market'
+import { getMSRPForCar } from '@/lib/msrp'
 import type { Car, PriceEntry } from '@/lib/types'
 
 export default async function CarDetailPage({
@@ -48,6 +50,7 @@ export default async function CarDetailPage({
   const typedCar = car as Car
 
   const compSummary = await getCompsForCar(supabase, typedCar)
+  const msrpLookup = getMSRPForCar(typedCar)
 
   const sortedEntries = [...entries].sort(
     (a, b) => new Date(b.recorded_date).getTime() - new Date(a.recorded_date).getTime()
@@ -92,6 +95,10 @@ export default async function CarDetailPage({
         </div>
         <CarDetailActions car={typedCar} />
       </div>
+
+      {msrpLookup && (
+        <LaunchMSRPCard lookup={msrpLookup} currentValue={currentValue > 0 ? currentValue : null} />
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card className="border-border bg-card">

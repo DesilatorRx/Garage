@@ -5,7 +5,7 @@
  * Cascade order in UI: Brand → Year → Model → Trim.
  */
 
-import type { Generation, TrimAvailability } from './types'
+import type { Generation, MSRP, TrimAvailability } from './types'
 import { PORSCHE_GENERATIONS } from './porsche'
 import { FERRARI_GENERATIONS } from './ferrari'
 import { LAMBORGHINI_GENERATIONS } from './lamborghini'
@@ -13,7 +13,7 @@ import { MCLAREN_GENERATIONS } from './mclaren'
 import { ASTON_MARTIN_GENERATIONS } from './aston-martin'
 import { MERCEDES_AMG_GENERATIONS } from './mercedes-amg'
 
-export type { Generation, TrimAvailability } from './types'
+export type { Generation, MSRP, TrimAvailability } from './types'
 
 export const CATALOG: Generation[] = [
   ...PORSCHE_GENERATIONS,
