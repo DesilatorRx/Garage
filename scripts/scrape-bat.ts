@@ -18,6 +18,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { extractTrimFromTitle } from '../lib/catalog'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -57,6 +58,7 @@ interface MarketSaleRow {
   source_url: string
   brand: string | null
   year: number | null
+  trim_match: string | null
   raw_title: string
   mileage: number | null
   sold_price: number
@@ -128,6 +130,7 @@ async function fetchPage(page: number): Promise<BatPageData> {
 function toRow(item: BatItem): MarketSaleRow {
   const brand = extractBrand(item.title)
   const year = extractYear(item.title, item.year)
+  const trimMatch = extractTrimFromTitle(brand, year, item.title)
   const mileage = extractMileage(item.title)
   const soldDate = new Date(item.sold_text_timestamp * 1000)
     .toISOString()
@@ -139,6 +142,7 @@ function toRow(item: BatItem): MarketSaleRow {
     source_url: item.url,
     brand,
     year,
+    trim_match: trimMatch,
     raw_title: item.title,
     mileage,
     sold_price: item.current_bid,
@@ -208,6 +212,10 @@ async function main() {
   for (const [brand, n] of [...byBrand.entries()].sort()) {
     console.log(`  ${brand.padEnd(15)} ${n}`)
   }
+
+  // Trim-match diagnostics
+  const trimMatched = matchedRows.filter((r) => r.trim_match !== null)
+  console.log(`Trim-matched: ${trimMatched.length}/${matchedRows.length} brand-matched rows`)
 
   // Upsert in batches
   const BATCH = 100

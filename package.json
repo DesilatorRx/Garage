@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "scrape:bat": "tsx scripts/scrape-bat.ts"
+    "scrape:bat": "tsx scripts/scrape-bat.ts",
+    "backfill:trim": "tsx scripts/backfill-trim-match.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

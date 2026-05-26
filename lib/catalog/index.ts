@@ -112,3 +112,52 @@ export function findGenerationByDisplayName(
     (g) => g.brand === brand && g.displayName === displayName,
   )
 }
+
+function normalizeForMatch(s: string): string {
+  // Lowercase + collapse whitespace + strip common punctuation that varies
+  // between catalog ("LP750-4") and BaT titles ("LP750 4" or "LP-750-4").
+  return s
+    .toLowerCase()
+    .replace(/[‐‑‒–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
+ * Try to extract a canonical trim name from a free-form auction title.
+ *
+ * Strategy: among all trims valid for `brand` + `year`, find the LONGEST
+ * trim name that appears as a substring in the title. Longer matches win
+ * because trim names nest ("GT3 RS" beats "GT3", "488 Pista" beats "488").
+ *
+ * Returns the canonical trim name (matching catalog spelling) or null
+ * when nothing meaningful matches.
+ */
+export function extractTrimFromTitle(
+  brand: string | null,
+  year: number | null,
+  title: string,
+): string | null {
+  if (!brand || year === null || year === undefined || !title) return null
+
+  const normalizedTitle = normalizeForMatch(title)
+  const generations = getGenerationsForBrandYear(brand, year)
+  if (generations.length === 0) return null
+
+  let best: string | null = null
+  let bestLen = 0
+
+  for (const gen of generations) {
+    for (const trim of gen.trims) {
+      if (!yearInRange(year, trim.years)) continue
+      const trimName = normalizeForMatch(trim.name)
+      if (trimName.length < 3) continue // skip 1-2 char trim names — too noisy
+      if (normalizedTitle.includes(trimName) && trimName.length > bestLen) {
+        best = trim.name
+        bestLen = trimName.length
+      }
+    }
+  }
+
+  return best
+}
