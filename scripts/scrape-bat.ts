@@ -3,16 +3,17 @@
  * into the `market_sales` table.
  *
  * Run:
- *   pnpm scrape:bat                # default 3 pages (~108 listings)
- *   SCRAPE_PAGES=10 pnpm scrape:bat  # backfill larger window
+ *   pnpm scrape:bat                # default 3 pages (~180 listings)
+ *   SCRAPE_PAGES=20 pnpm scrape:bat  # backfill larger window (~1200 listings)
  *
  * Required env:
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY   (bypasses RLS for inserts; keep secret)
  *
  * Notes:
- *  - Parses the embedded `auctionsCompletedInitialData` JSON blob from the
- *    /auctions/results/ page; no HTML parsing or JS execution required.
+ *  - Uses BaT's REST API (`/wp-json/bringatrailer/1.0/data/listings-filter`)
+ *    with state=sold + get_items=true. No HTML parsing needed.
+ *  - Pulls per_page=60 (BaT's max).
  *  - Rate-limited to ~1 page/1.5s. Idempotent via UNIQUE(source, source_listing_id).
  */
 
@@ -22,7 +23,9 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const PAGES_TO_FETCH = parseInt(process.env.SCRAPE_PAGES ?? '3', 10)
 
-const BAT_RESULTS_URL = 'https://bringatrailer.com/auctions/results/'
+const BAT_API_URL =
+  'https://bringatrailer.com/wp-json/bringatrailer/1.0/data/listings-filter'
+const PER_PAGE = 60
 const USER_AGENT =
   'Mozilla/5.0 (compatible; GarageBot/0.1; +https://garage-azure-eight.vercel.app/)'
 const PAGE_DELAY_MS = 1500
@@ -103,25 +106,23 @@ function extractMileage(title: string): number | null {
 }
 
 async function fetchPage(page: number): Promise<BatPageData> {
-  const url = new URL(BAT_RESULTS_URL)
-  if (page > 1) url.searchParams.set('page', String(page))
+  const url = new URL(BAT_API_URL)
+  url.searchParams.set('page', String(page))
+  url.searchParams.set('get_items', 'true')
+  url.searchParams.set('state', 'sold')
+  url.searchParams.set('per_page', String(PER_PAGE))
 
   const res = await fetch(url.toString(), {
     headers: {
       'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml',
+      'Accept': 'application/json',
       'Accept-Language': 'en-US,en;q=0.9',
     },
   })
   if (!res.ok) {
     throw new Error(`HTTP ${res.status} fetching ${url.toString()}`)
   }
-  const html = await res.text()
-  const match = html.match(/var\s+auctionsCompletedInitialData\s*=\s*({[\s\S]*?});\s*\n/)
-  if (!match) {
-    throw new Error('Could not locate auctionsCompletedInitialData in page HTML')
-  }
-  return JSON.parse(match[1]) as BatPageData
+  return (await res.json()) as BatPageData
 }
 
 function toRow(item: BatItem): MarketSaleRow {
