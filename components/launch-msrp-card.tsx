@@ -18,12 +18,17 @@ function formatCurrency(amount: number, currency: string = 'USD'): string {
 }
 
 export function LaunchMSRPCard({ lookup, currentValue }: LaunchMSRPCardProps) {
-  const { msrp, matchedTrimName, generationDisplayName } = lookup
+  const { msrp, source, matchedTrimName, generationDisplayName } = lookup
   const currency = msrp.currency ?? 'USD'
 
-  const subline = matchedTrimName
-    ? `${msrp.year} ${matchedTrimName}`
-    : `${msrp.year} ${generationDisplayName} (base)`
+  const subline =
+    source === 'owner-override'
+      ? `${msrp.year} • Owner-provided`
+      : matchedTrimName
+      ? `${msrp.year} ${matchedTrimName}`
+      : `${msrp.year} ${generationDisplayName} (base)`
+
+  const label = source === 'owner-override' ? 'MSRP (Yours)' : 'Launch MSRP'
 
   const change = currentValue !== null && msrp.amount > 0
     ? ((currentValue - msrp.amount) / msrp.amount) * 100
@@ -39,7 +44,7 @@ export function LaunchMSRPCard({ lookup, currentValue }: LaunchMSRPCardProps) {
             <Tag className="h-4 w-4" />
           </div>
           <div className="flex flex-col">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Launch MSRP</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
             <p className="text-lg font-bold font-mono text-foreground">
               {formatCurrency(msrp.amount, currency)}
             </p>

@@ -18,6 +18,7 @@ export async function addCar(formData: FormData) {
   const color = (formData.get('color') as string) || null
   const vin = (formData.get('vin') as string) || null
   const purchasePrice = formData.get('purchase_price') as string
+  const msrpOverride = formData.get('msrp_override') as string
   const purchaseDate = (formData.get('purchase_date') as string) || null
   const notes = (formData.get('notes') as string) || null
 
@@ -33,7 +34,8 @@ export async function addCar(formData: FormData) {
     variant,
     color,
     vin,
-    purchase_price: purchasePrice ? parseFloat(purchasePrice) : null,
+    purchase_price: purchasePrice === '' ? null : parseFloat(purchasePrice),
+    msrp_override: msrpOverride === '' ? null : parseFloat(msrpOverride),
     purchase_date: purchaseDate || null,
     notes,
   }).select().single()
@@ -61,6 +63,7 @@ export async function updateCar(carId: string, formData: FormData) {
   const color = (formData.get('color') as string) || null
   const vin = (formData.get('vin') as string) || null
   const purchasePrice = formData.get('purchase_price') as string
+  const msrpOverride = formData.get('msrp_override') as string
   const purchaseDate = (formData.get('purchase_date') as string) || null
   const notes = (formData.get('notes') as string) || null
 
@@ -75,7 +78,8 @@ export async function updateCar(carId: string, formData: FormData) {
     variant,
     color,
     vin,
-    purchase_price: purchasePrice ? parseFloat(purchasePrice) : null,
+    purchase_price: purchasePrice === '' ? null : parseFloat(purchasePrice),
+    msrp_override: msrpOverride === '' ? null : parseFloat(msrpOverride),
     purchase_date: purchaseDate || null,
     notes,
     updated_at: new Date().toISOString(),

@@ -11,6 +11,8 @@ export interface Car {
   purchase_date: string | null
   notes: string | null
   image_url: string | null
+  /** Owner-provided MSRP (e.g. from a dealer sheet). Beats catalog lookup. */
+  msrp_override: number | null
   created_at: string
   updated_at: string
 }

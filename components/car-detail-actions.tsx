@@ -101,12 +101,30 @@ function EditCarDialog({ car }: { car: Car }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="edit-price" className="text-foreground">Purchase Price</Label>
-              <Input id="edit-price" name="purchase_price" type="number" step="0.01" defaultValue={car.purchase_price ?? ''} className="border-border bg-secondary text-foreground" />
+              <Input id="edit-price" name="purchase_price" type="number" step="0.01" min="0" defaultValue={car.purchase_price ?? ''} className="border-border bg-secondary text-foreground" />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-date" className="text-foreground">Purchase Date</Label>
               <Input id="edit-date" name="purchase_date" type="date" defaultValue={car.purchase_date ?? ''} className="border-border bg-secondary text-foreground" />
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="edit-msrp-override" className="text-foreground">
+              MSRP Override (optional)
+            </Label>
+            <Input
+              id="edit-msrp-override"
+              name="msrp_override"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={car.msrp_override ?? ''}
+              placeholder="Your dealer-sheet MSRP, e.g. 345000"
+              className="border-border bg-secondary text-foreground"
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave blank to use the catalog's base-trim figure. Set to record your specific car's MSRP with options.
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="edit-notes" className="text-foreground">Notes</Label>

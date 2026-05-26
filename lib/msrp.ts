@@ -124,16 +124,30 @@ function matchTrim(
   return findTrimInText(gen, year, model)
 }
 
+export type MSRPSource = 'owner-override' | 'catalog-trim' | 'catalog-base'
+
 export interface MSRPLookup {
   msrp: MSRP
-  /** Which trim's MSRP this is — `null` when falling back to the generation base. */
+  source: MSRPSource
+  /** Which trim's MSRP this is — `null` when falling back to base or override. */
   matchedTrimName: string | null
-  generationDisplayName: string
+  /** Generation display name for context — `null` when source is owner-override. */
+  generationDisplayName: string | null
 }
 
 export function getMSRPForCar(
-  car: Pick<Car, 'brand' | 'year' | 'model' | 'variant'>,
+  car: Pick<Car, 'brand' | 'year' | 'model' | 'variant' | 'msrp_override'>,
 ): MSRPLookup | null {
+  // Owner override always wins, no catalog walking needed.
+  if (car.msrp_override !== null && car.msrp_override !== undefined && car.msrp_override > 0) {
+    return {
+      msrp: { amount: Number(car.msrp_override), currency: 'USD', year: car.year },
+      source: 'owner-override',
+      matchedTrimName: null,
+      generationDisplayName: null,
+    }
+  }
+
   if (!car.brand) return null
 
   const gen = matchGeneration(car.brand, car.year, car.model)
@@ -143,6 +157,7 @@ export function getMSRPForCar(
   if (trim?.msrp) {
     return {
       msrp: trim.msrp,
+      source: 'catalog-trim',
       matchedTrimName: trim.name,
       generationDisplayName: gen.displayName,
     }
@@ -151,6 +166,7 @@ export function getMSRPForCar(
   if (gen.baseMSRP) {
     return {
       msrp: gen.baseMSRP,
+      source: 'catalog-base',
       matchedTrimName: null,
       generationDisplayName: gen.displayName,
     }

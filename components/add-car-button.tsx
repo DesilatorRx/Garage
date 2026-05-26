@@ -88,6 +88,7 @@ export function AddCarButton() {
                 name="purchase_price"
                 type="number"
                 step="0.01"
+                min="0"
                 placeholder="85000"
                 className="border-border bg-secondary text-foreground"
               />
@@ -101,6 +102,23 @@ export function AddCarButton() {
                 className="border-border bg-secondary text-foreground"
               />
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="msrp_override" className="text-foreground">
+              MSRP Override (optional)
+            </Label>
+            <Input
+              id="msrp_override"
+              name="msrp_override"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Your dealer-sheet MSRP, e.g. 345000"
+              className="border-border bg-secondary text-foreground"
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave blank to use the catalog's base-trim figure. Set to record your specific car's MSRP with options.
+            </p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="notes" className="text-foreground">Notes</Label>
