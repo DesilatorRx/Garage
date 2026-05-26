@@ -20,6 +20,15 @@ export interface MarketSale {
   excerpt: string | null
 }
 
+/**
+ * The mode the comp lookup landed in:
+ *  - 'same-trim': we filtered to comps matching the user's exact trim.
+ *  - 'all-trims': either user has no trim, or we found zero same-trim comps
+ *                  and fell back to showing the whole generation.
+ *  - 'no-data':   no comps at all for this brand/year/model combo.
+ */
+export type CompFilterMode = 'same-trim' | 'all-trims' | 'no-data'
+
 export interface CompSummary {
   comps: MarketSale[]
   count: number
@@ -28,15 +37,17 @@ export interface CompSummary {
   newest_sale: string | null
   match_year_start: number | null
   match_year_end: number | null
-  /** Canonical trim name we inferred for the user's car (for highlighting/filtering). */
   user_trim: string | null
-  /** Count + median of comps that match user_trim (subset of the full set). */
-  same_trim_count: number
-  same_trim_median: number | null
+  filter_mode: CompFilterMode
+  /** When filter_mode==='same-trim', how many other-trim comps exist in the same
+   *  brand/year/model range (so the UI can offer "Show 45 other-trim comps"). */
+  other_trim_count: number
 }
 
 const FALLBACK_YEAR_TOLERANCE = 5
 const MAX_COMPS = 50
+// We pre-fetch a generous slice so the post-filter still gives plenty of comps.
+const RAW_FETCH_LIMIT = 400
 
 function emptySummary(userTrim: string | null = null): CompSummary {
   return {
@@ -48,8 +59,8 @@ function emptySummary(userTrim: string | null = null): CompSummary {
     match_year_start: null,
     match_year_end: null,
     user_trim: userTrim,
-    same_trim_count: 0,
-    same_trim_median: null,
+    filter_mode: 'no-data',
+    other_trim_count: 0,
   }
 }
 
@@ -96,11 +107,6 @@ function resolveYearRange(car: Pick<Car, 'brand' | 'year' | 'model'>): {
   }
 }
 
-/**
- * Resolve the user's canonical trim. Prefer their `variant` field
- * (CarSelector stores the catalog trim name there). Fall back to
- * extracting a trim from the model field for cars saved via legacy forms.
- */
 function resolveUserTrim(
   car: Pick<Car, 'brand' | 'year' | 'model' | 'variant'>,
 ): string | null {
@@ -112,21 +118,34 @@ function resolveUserTrim(
 }
 
 /**
- * Look up auction comps that approximately match the user's car.
- *  - brand exact match
- *  - year within the matched generation's full range (catalog-driven),
- *    or fall back to year ± 5
- *  - model token substring in raw_title
+ * Compute trim_match on-the-fly for rows where the stored value is NULL.
+ * This means the same filtering works whether the scraper ran the new
+ * trim-extracting code or the old one (and means we don't strictly need
+ * the trim_match backfill — though it speeds things up at scale).
+ */
+function ensureTrimMatch(c: MarketSale): MarketSale {
+  if (c.trim_match) return c
+  const computed = extractTrimFromTitle(c.brand, c.year, c.raw_title)
+  return computed ? { ...c, trim_match: computed } : c
+}
+
+/**
+ * Strict apples-to-apples comp lookup:
  *
- * Same-trim comps are sorted to the top so the user sees the most
- * directly-comparable history first.
+ *  - brand exact
+ *  - year inside the matching generation (or year ± 5 if no generation match)
+ *  - model token substring in raw_title
+ *  - **then** filter to exact trim match if the user has a trim
+ *
+ * If the trim filter would leave zero comps, we fall back to all-trims so
+ * the panel isn't empty, but mark filter_mode='all-trims' so the UI can
+ * say "no exact-trim comps yet — showing all <generation> trims".
  */
 export async function getCompsForCar(
   supabase: SupabaseClient,
   car: Pick<Car, 'brand' | 'year' | 'model' | 'variant'>,
 ): Promise<CompSummary> {
   const userTrim = resolveUserTrim(car)
-
   if (!car.brand) return emptySummary(userTrim)
 
   const { yearMin, yearMax } = resolveYearRange(car)
@@ -138,7 +157,7 @@ export async function getCompsForCar(
     .gte('year', yearMin)
     .lte('year', yearMax)
     .order('sold_date', { ascending: false })
-    .limit(MAX_COMPS)
+    .limit(RAW_FETCH_LIMIT)
 
   const token = modelToken(car)
   if (token) {
@@ -151,37 +170,43 @@ export async function getCompsForCar(
     return emptySummary(userTrim)
   }
 
-  const fetched = (data ?? []) as MarketSale[]
+  // Enrich each comp with a computed trim_match if the stored one is NULL.
+  const fetched = ((data ?? []) as MarketSale[]).map(ensureTrimMatch)
 
-  // Sort: same-trim comps first (preserving sold_date desc within each bucket)
-  const isSameTrim = (c: MarketSale) =>
-    userTrim !== null && c.trim_match !== null && c.trim_match === userTrim
-  const comps = [...fetched].sort((a, b) => {
-    const aSame = isSameTrim(a)
-    const bSame = isSameTrim(b)
-    if (aSame && !bSame) return -1
-    if (!aSame && bSame) return 1
-    return new Date(b.sold_date).getTime() - new Date(a.sold_date).getTime()
-  })
+  if (fetched.length === 0) {
+    return {
+      ...emptySummary(userTrim),
+      match_year_start: yearMin,
+      match_year_end: yearMax,
+    }
+  }
 
-  const sameTrimComps = comps.filter(isSameTrim)
-  const samePrices = sameTrimComps
-    .map((c) => Number(c.sold_price))
-    .filter((p) => Number.isFinite(p))
-  const allPrices = comps
-    .map((c) => Number(c.sold_price))
-    .filter((p) => Number.isFinite(p))
+  // Default: filter to user's exact trim. Falls back to all-trims if zero.
+  let comps = fetched
+  let mode: CompFilterMode = 'all-trims'
+  let otherTrimCount = 0
+  if (userTrim) {
+    const sameTrim = fetched.filter((c) => c.trim_match === userTrim)
+    if (sameTrim.length > 0) {
+      comps = sameTrim
+      mode = 'same-trim'
+      otherTrimCount = fetched.length - sameTrim.length
+    }
+  }
+
+  const display = comps.slice(0, MAX_COMPS)
+  const prices = display.map((c) => Number(c.sold_price)).filter((p) => Number.isFinite(p))
 
   return {
-    comps,
-    count: comps.length,
-    median_price: median(allPrices),
-    oldest_sale: comps.length ? comps[comps.length - 1].sold_date : null,
-    newest_sale: comps.length ? comps[0].sold_date : null,
+    comps: display,
+    count: display.length,
+    median_price: median(prices),
+    oldest_sale: display.length ? display[display.length - 1].sold_date : null,
+    newest_sale: display.length ? display[0].sold_date : null,
     match_year_start: yearMin,
     match_year_end: yearMax,
     user_trim: userTrim,
-    same_trim_count: sameTrimComps.length,
-    same_trim_median: median(samePrices),
+    filter_mode: mode,
+    other_trim_count: otherTrimCount,
   }
 }

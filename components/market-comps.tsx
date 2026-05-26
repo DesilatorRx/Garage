@@ -27,6 +27,10 @@ function formatDate(iso: string): string {
 
 export function MarketComps({ summary, carCurrentValue }: MarketCompsProps) {
   if (summary.count === 0) {
+    const rangeLabel =
+      summary.match_year_start && summary.match_year_end
+        ? ` (${summary.match_year_start}–${summary.match_year_end})`
+        : ''
     return (
       <Card className="border-border bg-card">
         <CardHeader>
@@ -35,31 +39,34 @@ export function MarketComps({ summary, carCurrentValue }: MarketCompsProps) {
             Market Comparables
           </CardTitle>
           <CardDescription>
-            Recent auction results matching this brand, year, and model. None yet — the scraper
-            picks up more every day.
+            {summary.user_trim ? (
+              <>
+                No {summary.user_trim} comps yet{rangeLabel}. The scraper picks up more every day —
+                check back, or run a bigger backfill.
+              </>
+            ) : (
+              <>No comps yet{rangeLabel}. The scraper picks up more every day.</>
+            )}
           </CardDescription>
         </CardHeader>
       </Card>
     )
   }
 
-  // Pick which median anchors the "vs median" comparison: prefer same-trim
-  // (more representative) when there are at least 3 same-trim comps.
-  const useTrimMedian = summary.same_trim_count >= 3 && summary.same_trim_median !== null
-  const anchorMedian = useTrimMedian ? summary.same_trim_median : summary.median_price
-  const anchorLabel = useTrimMedian
-    ? `vs ${summary.user_trim} median`
-    : 'vs Median (all trims)'
-
   const vsMedian =
-    carCurrentValue !== null && anchorMedian !== null
-      ? ((carCurrentValue - anchorMedian) / anchorMedian) * 100
+    carCurrentValue !== null && summary.median_price !== null
+      ? ((carCurrentValue - summary.median_price) / summary.median_price) * 100
       : null
 
   const rangeLabel =
     summary.match_year_start && summary.match_year_end
       ? `${summary.match_year_start}–${summary.match_year_end}`
       : null
+
+  const isSameTrim = summary.filter_mode === 'same-trim'
+  const headerSubtitle = isSameTrim
+    ? `${summary.count} ${summary.user_trim} sale${summary.count === 1 ? '' : 's'}`
+    : `${summary.count} sale${summary.count === 1 ? '' : 's'} across all trims`
 
   return (
     <Card className="border-border bg-card">
@@ -69,38 +76,39 @@ export function MarketComps({ summary, carCurrentValue }: MarketCompsProps) {
           Market Comparables
         </CardTitle>
         <CardDescription>
-          {summary.count} sale{summary.count === 1 ? '' : 's'}
-          {rangeLabel && <> across {rangeLabel} model years</>}
+          {headerSubtitle}
+          {rangeLabel && <> · {rangeLabel} model years</>}
           {summary.oldest_sale && summary.newest_sale && (
             <> · {formatDate(summary.oldest_sale)} → {formatDate(summary.newest_sale)}</>
+          )}
+          {isSameTrim && summary.other_trim_count > 0 && (
+            <>
+              {' · '}
+              <span className="text-muted-foreground">
+                {summary.other_trim_count} other-trim comp{summary.other_trim_count === 1 ? '' : 's'} hidden
+              </span>
+            </>
+          )}
+          {!isSameTrim && summary.user_trim && (
+            <>
+              {' · '}
+              <span className="text-amber-500">
+                No exact {summary.user_trim} comps yet — showing all trims
+              </span>
+            </>
           )}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {summary.user_trim && summary.same_trim_count > 0 ? (
-            <Stat
-              label={`${summary.user_trim} Comps`}
-              value={String(summary.same_trim_count)}
-              tone="positive"
-            />
-          ) : (
-            <Stat label="Comp Count" value={String(summary.count)} />
-          )}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          <Stat label="Comps" value={String(summary.count)} />
           <Stat
-            label="All-Trims Median"
+            label={isSameTrim ? `${summary.user_trim} Median` : 'Median (all trims)'}
             value={summary.median_price !== null ? formatCurrency(summary.median_price) : '—'}
           />
-          {summary.same_trim_median !== null && (
-            <Stat
-              label={`${summary.user_trim} Median`}
-              value={formatCurrency(summary.same_trim_median)}
-              tone="positive"
-            />
-          )}
           {vsMedian !== null && (
             <Stat
-              label={anchorLabel}
+              label="Your Value vs Median"
               value={`${vsMedian >= 0 ? '+' : ''}${vsMedian.toFixed(1)}%`}
               tone={vsMedian >= 0 ? 'positive' : 'negative'}
             />
@@ -109,7 +117,7 @@ export function MarketComps({ summary, carCurrentValue }: MarketCompsProps) {
 
         <div className="flex flex-col divide-y divide-border">
           {summary.comps.map((comp) => (
-            <CompRow key={comp.id} comp={comp} userTrim={summary.user_trim} />
+            <CompRow key={comp.id} comp={comp} userTrim={summary.user_trim} sameTrimMode={isSameTrim} />
           ))}
         </div>
       </CardContent>
@@ -117,9 +125,21 @@ export function MarketComps({ summary, carCurrentValue }: MarketCompsProps) {
   )
 }
 
-function CompRow({ comp, userTrim }: { comp: MarketSale; userTrim: string | null }) {
-  const isSameTrim =
+function CompRow({
+  comp,
+  userTrim,
+  sameTrimMode,
+}: {
+  comp: MarketSale
+  userTrim: string | null
+  sameTrimMode: boolean
+}) {
+  const isUserTrim =
     userTrim !== null && comp.trim_match !== null && comp.trim_match === userTrim
+
+  // In all-trims fallback mode, highlight user's trim if it does appear.
+  // In same-trim mode, every row is the user's trim so highlighting is implicit.
+  const showRowHighlight = !sameTrimMode && isUserTrim
 
   return (
     <a
@@ -127,7 +147,7 @@ function CompRow({ comp, userTrim }: { comp: MarketSale; userTrim: string | null
       target="_blank"
       rel="noopener noreferrer"
       className={`flex items-start justify-between gap-4 py-3 -mx-2 px-2 rounded transition-colors ${
-        isSameTrim ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-accent/40'
+        showRowHighlight ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-accent/40'
       }`}
     >
       <div className="flex-1 min-w-0">
@@ -136,7 +156,7 @@ function CompRow({ comp, userTrim }: { comp: MarketSale; userTrim: string | null
             <Badge
               variant="secondary"
               className={
-                isSameTrim
+                isUserTrim
                   ? 'bg-primary/20 text-primary border border-primary/40 text-[10px] px-1.5 py-0'
                   : 'bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0'
               }
