@@ -63,7 +63,7 @@ export default function Page() {
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-2xl text-card-foreground">Create Account</CardTitle>
-              <CardDescription>Start tracking your Porsche collection</CardDescription>
+              <CardDescription>Start tracking your exotic car collection</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignUp}>

@@ -18,7 +18,7 @@ export default function Page() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                {"You've successfully signed up. Please check your email to confirm your account before signing in and adding your Porsche collection."}
+                {"You've successfully signed up. Please check your email to confirm your account before signing in and adding your collection."}
               </p>
             </CardContent>
           </Card>

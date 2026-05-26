@@ -29,7 +29,7 @@ export function CarCard({ car }: CarCardProps) {
                 )}
               </div>
               <h3 className="mt-1 text-lg font-semibold text-foreground">
-                {car.model}
+                <span className="text-muted-foreground font-normal">{car.brand}</span>{' '}{car.model}
               </h3>
               {car.variant && (
                 <p className="text-sm text-muted-foreground">{car.variant}</p>

@@ -16,23 +16,9 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { addCar } from '@/app/dashboard/actions'
-
-const PORSCHE_MODELS = [
-  '356', '911', '912', '914', '924', '928', '930', '944', '959', '964',
-  '968', '986 Boxster', '987 Boxster', '981 Boxster', '718 Boxster',
-  '996', '997', '991', '992',
-  '986 Cayman', '987 Cayman', '981 Cayman', '718 Cayman',
-  'Carrera GT', '918 Spyder', 'Cayenne', 'Macan', 'Panamera', 'Taycan',
-]
+import { CarSelector } from '@/components/car-selector'
 
 export function AddCarButton() {
   const [open, setOpen] = useState(false)
@@ -69,59 +55,21 @@ export function AddCarButton() {
       </DialogTrigger>
       <DialogContent className="border-border bg-card text-card-foreground sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-foreground">Add a Porsche</DialogTitle>
+          <DialogTitle className="text-foreground">Add a Car</DialogTitle>
           <DialogDescription>
             Add a new car to your garage collection.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="year" className="text-foreground">Year</Label>
-              <Input
-                id="year"
-                name="year"
-                type="number"
-                placeholder="1973"
-                required
-                min={1948}
-                max={new Date().getFullYear() + 1}
-                className="border-border bg-secondary text-foreground"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="model" className="text-foreground">Model</Label>
-              <Select name="model" required>
-                <SelectTrigger className="border-border bg-secondary text-foreground">
-                  <SelectValue placeholder="Select model" />
-                </SelectTrigger>
-                <SelectContent className="border-border bg-card text-card-foreground">
-                  {PORSCHE_MODELS.map((model) => (
-                    <SelectItem key={model} value={model}>{model}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="variant" className="text-foreground">Variant / Trim</Label>
-              <Input
-                id="variant"
-                name="variant"
-                placeholder="Carrera RS"
-                className="border-border bg-secondary text-foreground"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="color" className="text-foreground">Color</Label>
-              <Input
-                id="color"
-                name="color"
-                placeholder="Guards Red"
-                className="border-border bg-secondary text-foreground"
-              />
-            </div>
+          <CarSelector />
+          <div className="grid gap-2">
+            <Label htmlFor="color" className="text-foreground">Color</Label>
+            <Input
+              id="color"
+              name="color"
+              placeholder="Guards Red"
+              className="border-border bg-secondary text-foreground"
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="vin" className="text-foreground">VIN (optional)</Label>

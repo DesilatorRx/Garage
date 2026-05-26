@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { GarageMark } from '@/components/garage-mark'
 
 export default function Page() {
   const [email, setEmail] = useState('')
@@ -49,14 +50,14 @@ export default function Page() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2 mb-4">
-            <PorscheCrest className="h-16 w-auto" />
-            <h1 className="text-xl font-semibold tracking-wide text-foreground">PORSCHE GARAGE</h1>
+            <GarageMark className="h-16 w-auto" />
+            <h1 className="text-xl font-semibold tracking-wide text-foreground">THE GARAGE</h1>
           </div>
           <Card className="border-border bg-card">
             <CardHeader>
               <CardTitle className="text-2xl text-card-foreground">Sign In</CardTitle>
               <CardDescription>
-                Access your classic Porsche collection tracker
+                Access your exotic car collection tracker
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -67,7 +68,7 @@ export default function Page() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="driver@porsche.com"
+                      placeholder="you@example.com"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -108,12 +109,3 @@ export default function Page() {
   )
 }
 
-function PorscheCrest({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 60 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="56" height="68" rx="4" stroke="hsl(0, 0%, 75%)" strokeWidth="2" fill="none" />
-      <rect x="6" y="6" width="48" height="60" rx="2" stroke="hsl(0, 72%, 51%)" strokeWidth="1" fill="none" />
-      <text x="30" y="42" textAnchor="middle" fill="hsl(0, 0%, 93%)" fontSize="14" fontWeight="bold" fontFamily="serif">P</text>
-    </svg>
-  )
-}

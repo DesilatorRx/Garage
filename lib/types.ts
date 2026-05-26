@@ -1,6 +1,7 @@
 export interface Car {
   id: string
   user_id: string
+  brand: string
   year: number
   model: string
   variant: string | null

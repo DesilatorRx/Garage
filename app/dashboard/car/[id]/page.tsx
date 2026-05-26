@@ -77,7 +77,7 @@ export default async function CarDetailPage({
             )}
           </div>
           <h2 className="mt-1 text-3xl font-bold text-foreground">
-            Porsche {typedCar.model}
+            {typedCar.brand} {typedCar.model}
           </h2>
           {typedCar.variant && (
             <p className="text-lg text-muted-foreground">{typedCar.variant}</p>

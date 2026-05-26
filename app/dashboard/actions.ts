@@ -11,6 +11,7 @@ export async function addCar(formData: FormData) {
     return { error: 'Not authenticated' }
   }
 
+  const brand = formData.get('brand') as string
   const year = parseInt(formData.get('year') as string)
   const model = formData.get('model') as string
   const variant = (formData.get('variant') as string) || null
@@ -20,8 +21,13 @@ export async function addCar(formData: FormData) {
   const purchaseDate = (formData.get('purchase_date') as string) || null
   const notes = (formData.get('notes') as string) || null
 
+  if (!brand || !model || !year) {
+    return { error: 'Brand, year, and model are required' }
+  }
+
   const { data, error } = await supabase.from('cars').insert({
     user_id: user.id,
+    brand,
     year,
     model,
     variant,
@@ -48,6 +54,7 @@ export async function updateCar(carId: string, formData: FormData) {
     return { error: 'Not authenticated' }
   }
 
+  const brand = formData.get('brand') as string
   const year = parseInt(formData.get('year') as string)
   const model = formData.get('model') as string
   const variant = (formData.get('variant') as string) || null
@@ -57,7 +64,12 @@ export async function updateCar(carId: string, formData: FormData) {
   const purchaseDate = (formData.get('purchase_date') as string) || null
   const notes = (formData.get('notes') as string) || null
 
+  if (!brand || !model || !year) {
+    return { error: 'Brand, year, and model are required' }
+  }
+
   const { error } = await supabase.from('cars').update({
+    brand,
     year,
     model,
     variant,

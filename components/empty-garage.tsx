@@ -8,7 +8,7 @@ export function EmptyGarage() {
       </div>
       <h3 className="mt-4 text-lg font-semibold text-foreground">Your garage is empty</h3>
       <p className="mt-2 max-w-sm text-center text-sm text-muted-foreground">
-        Add your first Porsche to start tracking its market value over time. Click the button above to get started.
+        Add your first car to start tracking its market value over time. Click the button above to get started.
       </p>
     </div>
   )
