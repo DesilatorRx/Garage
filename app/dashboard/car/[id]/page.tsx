@@ -153,6 +153,7 @@ export default async function CarDetailPage({
         entries={entries}
         purchasePrice={typedCar.purchase_price}
         purchaseDate={typedCar.purchase_date}
+        comps={compSummary.comps}
       />
 
       <MarketComps summary={compSummary} carCurrentValue={currentValue > 0 ? currentValue : null} />
