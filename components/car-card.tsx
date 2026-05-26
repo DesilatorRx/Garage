@@ -9,10 +9,18 @@ interface CarCardProps {
 }
 
 export function CarCard({ car }: CarCardProps) {
-  const currentValue = car.latest_price ?? car.purchase_price ?? 0
-  const changePct = car.price_change_pct ?? 0
-  const isPositive = changePct > 0
-  const isNegative = changePct < 0
+  const currentValue =
+    car.latest_price ?? car.market_estimate ?? car.purchase_price ?? 0
+
+  // Source label: tells the user where "Current Value" came from
+  let valueSource: string | null = null
+  if (car.latest_price !== null) valueSource = 'Last logged'
+  else if (car.market_estimate !== null) valueSource = 'Market median'
+  else if (car.purchase_price !== null) valueSource = 'Purchase price (no comps yet)'
+
+  const changePct = car.price_change_pct
+  const isPositive = changePct !== null && changePct > 0
+  const isNegative = changePct !== null && changePct < 0
 
   return (
     <Link href={`/dashboard/car/${car.id}`}>
@@ -44,13 +52,16 @@ export function CarCard({ car }: CarCardProps) {
               <p className="mt-1 text-xl font-bold font-mono text-foreground">
                 {formatCurrency(currentValue)}
               </p>
+              {valueSource && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">{valueSource}</p>
+              )}
             </div>
             <div className="flex items-center gap-1 text-right">
               {isPositive && <TrendingUp className="h-4 w-4 text-emerald-500" />}
               {isNegative && <TrendingDown className="h-4 w-4 text-primary" />}
               {!isPositive && !isNegative && <Minus className="h-4 w-4 text-muted-foreground" />}
               <span className={`text-sm font-mono font-semibold ${isPositive ? 'text-emerald-500' : isNegative ? 'text-primary' : 'text-muted-foreground'}`}>
-                {isPositive ? '+' : ''}{changePct.toFixed(1)}%
+                {changePct === null ? '—' : `${isPositive ? '+' : ''}${changePct.toFixed(1)}%`}
               </span>
             </div>
           </div>

@@ -29,7 +29,11 @@ export interface PriceEntry {
 }
 
 export interface CarWithLatestPrice extends Car {
+  /** Latest manually-logged price entry, if any. */
   latest_price: number | null
+  /** Median of recent same-trim auction comps, if available. */
+  market_estimate: number | null
+  /** Total change vs purchase_price using the best available current-value source. */
   price_change: number | null
   price_change_pct: number | null
   price_entries_count: number

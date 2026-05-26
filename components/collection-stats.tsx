@@ -6,15 +6,29 @@ interface CollectionStatsProps {
   cars: CarWithLatestPrice[]
 }
 
+function currentValueOf(car: CarWithLatestPrice): number {
+  // Same fallback chain as CarCard: manual entry > market median > purchase price
+  return car.latest_price ?? car.market_estimate ?? car.purchase_price ?? 0
+}
+
 export function CollectionStats({ cars }: CollectionStatsProps) {
   const totalCars = cars.length
-  const totalValue = cars.reduce((sum, car) => sum + (car.latest_price ?? car.purchase_price ?? 0), 0)
+  const totalValue = cars.reduce((sum, car) => sum + currentValueOf(car), 0)
   const totalPurchase = cars.reduce((sum, car) => sum + (car.purchase_price ?? 0), 0)
   const totalGain = totalValue - totalPurchase
   const totalGainPct = totalPurchase > 0 ? (totalGain / totalPurchase) * 100 : 0
 
-  const carsUp = cars.filter(c => (c.price_change ?? 0) > 0).length
-  const carsDown = cars.filter(c => (c.price_change ?? 0) < 0).length
+  const carsUp = cars.filter((c) => (c.price_change ?? 0) > 0).length
+  const carsDown = cars.filter((c) => (c.price_change ?? 0) < 0).length
+
+  const marketEstimateCount = cars.filter(
+    (c) => c.latest_price === null && c.market_estimate !== null,
+  ).length
+
+  const valueSublabel =
+    marketEstimateCount > 0
+      ? `${marketEstimateCount} from market median${marketEstimateCount === 1 ? '' : 's'}`
+      : 'Current market estimate'
 
   const stats = [
     {
@@ -27,14 +41,17 @@ export function CollectionStats({ cars }: CollectionStatsProps) {
       label: 'Collection Value',
       value: formatCurrency(totalValue),
       icon: DollarSign,
-      sublabel: 'Current market estimate',
+      sublabel: valueSublabel,
     },
     {
       label: 'Total Gain/Loss',
       value: formatCurrency(totalGain),
       icon: totalGain >= 0 ? TrendingUp : TrendingDown,
-      sublabel: `${totalGainPct >= 0 ? '+' : ''}${totalGainPct.toFixed(1)}% overall`,
-      positive: totalGain >= 0,
+      sublabel:
+        totalPurchase > 0
+          ? `${totalGainPct >= 0 ? '+' : ''}${totalGainPct.toFixed(1)}% overall`
+          : 'Add purchase prices to track',
+      positive: totalPurchase > 0 ? totalGain >= 0 : undefined,
     },
     {
       label: 'Avg. per Car',

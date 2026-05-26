@@ -141,6 +141,62 @@ function ensureTrimMatch(c: MarketSale): MarketSale {
  * the panel isn't empty, but mark filter_mode='all-trims' so the UI can
  * say "no exact-trim comps yet — showing all <generation> trims".
  */
+/**
+ * Lightweight version of `getCompsForCar` that returns only the median price.
+ * Used on the dashboard to estimate "current value" for cars without manual
+ * price entries — way faster than the full comp fetch since we skip the
+ * heavy raw_data jsonb column and limit to 60 rows.
+ *
+ * Prefers same-trim median; falls back to all-trims median if zero same-trim.
+ * Returns null when there's no comp data for this brand/model at all.
+ */
+export async function getMarketEstimateForCar(
+  supabase: SupabaseClient,
+  car: Pick<Car, 'brand' | 'year' | 'model' | 'variant'>,
+): Promise<number | null> {
+  if (!car.brand) return null
+
+  const { yearMin, yearMax } = resolveYearRange(car)
+  const userTrim = resolveUserTrim(car)
+  const token = modelToken(car)
+
+  let query = supabase
+    .from('market_sales')
+    .select('sold_price, raw_title, brand, year, trim_match')
+    .eq('brand', car.brand)
+    .gte('year', yearMin)
+    .lte('year', yearMax)
+    .order('sold_date', { ascending: false })
+    .limit(60)
+
+  if (token) query = query.ilike('raw_title', `%${token}%`)
+
+  const { data, error } = await query
+  if (error || !data || data.length === 0) return null
+
+  const rows = data as Array<{
+    sold_price: number
+    raw_title: string
+    brand: string | null
+    year: number | null
+    trim_match: string | null
+  }>
+
+  if (userTrim) {
+    const sameTrim = rows.filter((r) => {
+      const tm = r.trim_match ?? extractTrimFromTitle(r.brand, r.year, r.raw_title)
+      return tm === userTrim
+    })
+    if (sameTrim.length > 0) {
+      const prices = sameTrim.map((r) => Number(r.sold_price)).filter(Number.isFinite)
+      return median(prices)
+    }
+  }
+
+  const allPrices = rows.map((r) => Number(r.sold_price)).filter(Number.isFinite)
+  return median(allPrices)
+}
+
 export async function getCompsForCar(
   supabase: SupabaseClient,
   car: Pick<Car, 'brand' | 'year' | 'model' | 'variant'>,

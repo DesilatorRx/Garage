@@ -4,6 +4,7 @@ import { CollectionStats } from '@/components/collection-stats'
 import { CarCard } from '@/components/car-card'
 import { EmptyGarage } from '@/components/empty-garage'
 import { AddCarButton } from '@/components/add-car-button'
+import { getMarketEstimateForCar } from '@/lib/market'
 import type { CarWithLatestPrice, Car, PriceEntry } from '@/lib/types'
 
 export default async function DashboardPage() {
@@ -26,25 +27,43 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .order('recorded_date', { ascending: false })
 
-  const carsWithPrices: CarWithLatestPrice[] = (cars as Car[] ?? []).map((car) => {
-    const entries = (priceEntries as PriceEntry[] ?? []).filter((e) => e.car_id === car.id)
-    const sortedEntries = entries.sort(
-      (a, b) => new Date(b.recorded_date).getTime() - new Date(a.recorded_date).getTime()
-    )
-    const latestPrice = sortedEntries[0]?.price ?? null
-    const previousPrice = sortedEntries[1]?.price ?? car.purchase_price ?? null
+  const carRows = (cars as Car[] | null) ?? []
+  const entryRows = (priceEntries as PriceEntry[] | null) ?? []
 
+  // Fetch a per-car market estimate in parallel. Each call hits market_sales
+  // with the same brand/year/model/trim filter the detail page uses, so the
+  // dashboard and detail page agree on what a car is "worth right now."
+  const marketEstimates = await Promise.all(
+    carRows.map((car) => getMarketEstimateForCar(supabase, car)),
+  )
+
+  const carsWithPrices: CarWithLatestPrice[] = carRows.map((car, i) => {
+    const entries = entryRows.filter((e) => e.car_id === car.id)
+    const sortedEntries = entries.sort(
+      (a, b) => new Date(b.recorded_date).getTime() - new Date(a.recorded_date).getTime(),
+    )
+    const latestEntryPrice = sortedEntries[0]?.price ?? null
+    const marketEstimate = marketEstimates[i]
+
+    // Best estimate of current value: manual entry > market median > purchase price
+    const currentValue = latestEntryPrice ?? marketEstimate ?? car.purchase_price
+
+    // Total Gain/Loss compares current estimate vs original purchase price
     let priceChange: number | null = null
     let priceChangePct: number | null = null
-
-    if (latestPrice !== null && previousPrice !== null) {
-      priceChange = latestPrice - previousPrice
-      priceChangePct = previousPrice > 0 ? (priceChange / previousPrice) * 100 : 0
+    if (
+      currentValue !== null &&
+      car.purchase_price !== null &&
+      car.purchase_price > 0
+    ) {
+      priceChange = currentValue - car.purchase_price
+      priceChangePct = (priceChange / car.purchase_price) * 100
     }
 
     return {
       ...car,
-      latest_price: latestPrice,
+      latest_price: latestEntryPrice,
+      market_estimate: marketEstimate,
       price_change: priceChange,
       price_change_pct: priceChangePct,
       price_entries_count: entries.length,
