@@ -45,6 +45,7 @@ Schema lives in [`scripts/`](scripts/) and is applied via Supabase SQL Editor (o
 |---|---|
 | [scripts/001_create_tables.sql](scripts/001_create_tables.sql) | Creates `cars` + `price_entries` tables with RLS policies |
 | [scripts/002_add_brand_column.sql](scripts/002_add_brand_column.sql) | Adds `brand` column to `cars`, backfills existing rows to `'Porsche'` |
+| [scripts/003_market_sales.sql](scripts/003_market_sales.sql) | Creates `market_sales` table for scraped auction comps + indexes + trigram extension |
 
 Run them in numerical order on a fresh project.
 
@@ -86,12 +87,44 @@ Vercel auto-deploys on push to `main`. A few gotchas baked into config:
 - Supabase env vars must be set in **Vercel → Project Settings → Environment Variables**. Re-deploy without build cache when you add or change them (`NEXT_PUBLIC_*` values are inlined into the bundle at build time).
 - In **Supabase → Authentication → URL Configuration**, set the production domain as the Site URL and add `https://<your-vercel-domain>/**`, `http://localhost:3000/**` to Redirect URLs so email confirmation links work.
 
+## Market comparables (BaT scraper)
+
+A daily scraper pulls recently-sold listings from Bring a Trailer and writes them to `market_sales`. Each car's detail page renders a `MarketComps` panel showing recent sales that match (`brand`, `year ± 2`, model-token in title), the median sold price, and a link out to each listing.
+
+### How it works
+
+- [scripts/scrape-bat.ts](scripts/scrape-bat.ts) fetches `https://bringatrailer.com/auctions/results/?page=N`, parses the embedded `auctionsCompletedInitialData` JSON blob (no HTML parsing — BaT serves the listing data straight into the page), brand-matches each title against the catalog, and upserts into `market_sales`. Idempotent via `UNIQUE(source, source_listing_id)`.
+- [.github/workflows/scrape-bat.yml](.github/workflows/scrape-bat.yml) runs the script daily at 09:15 UTC, and can be triggered manually with a custom page count for backfills.
+
+### Required secrets (GitHub Actions)
+
+In **Repo → Settings → Secrets and variables → Actions**, add:
+
+| Secret | Value |
+|---|---|
+| `SUPABASE_URL` | Same as your `NEXT_PUBLIC_SUPABASE_URL` (e.g. `https://abc.supabase.co`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | From **Supabase → Project Settings → API → service_role secret**. Bypasses RLS — never put this in client code. |
+
+### Running locally
+
+```bash
+# Adds SUPABASE_SERVICE_ROLE_KEY to .env.local first
+SCRAPE_PAGES=3 pnpm scrape:bat   # default: 3 pages = ~108 sold listings
+SCRAPE_PAGES=20 pnpm scrape:bat  # one-off backfill: ~720 listings
+```
+
+### ToS note
+
+BaT's terms technically prohibit scraping. For low-volume personal use this is low-risk; if the app goes public, switch to the paid Hagerty Valuation Tools API or Classic.com API.
+
 ## Roadmap
 
 - ✅ Multi-brand catalog with cascading selector
 - ✅ Multi-brand rebrand
-- 🚧 Daily scraper for Classic.com / Bring a Trailer / Cars & Bids → `market_sales` table
+- ✅ Daily BaT scraper → `market_sales` table + per-car comp panel
 - 🚧 Per-model market trend UI (sparkline, 1m/6m/1y % change)
+- 🚧 Additional sources (Cars & Bids, RM Sotheby's, Mecum)
 - 🚧 Historical sales backfill
-- 🔮 AI buy/sell advisor (Claude-powered) — requires accumulated historical comp data first
+- 🔮 AI buy/sell advisor (Claude-powered) — comp data + trend signals → "buy X for projected Y% gain over Z years"
+- 🔮 Ownership-cost intelligence ("$X per 3,000 miles") — requires per-model maintenance interval data
 - 🔮 Monetization (subscription tier or affiliate parts links)

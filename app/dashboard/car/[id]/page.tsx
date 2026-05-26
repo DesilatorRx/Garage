@@ -9,6 +9,8 @@ import { PriceChart } from '@/components/price-chart'
 import { PriceHistoryTable } from '@/components/price-history-table'
 import { AddPriceEntryForm } from '@/components/add-price-entry-form'
 import { CarDetailActions } from '@/components/car-detail-actions'
+import { MarketComps } from '@/components/market-comps'
+import { getCompsForCar } from '@/lib/market'
 import type { Car, PriceEntry } from '@/lib/types'
 
 export default async function CarDetailPage({
@@ -44,6 +46,8 @@ export default async function CarDetailPage({
 
   const entries = (priceEntries as PriceEntry[]) ?? []
   const typedCar = car as Car
+
+  const compSummary = await getCompsForCar(supabase, typedCar)
 
   const sortedEntries = [...entries].sort(
     (a, b) => new Date(b.recorded_date).getTime() - new Date(a.recorded_date).getTime()
@@ -143,6 +147,8 @@ export default async function CarDetailPage({
         purchasePrice={typedCar.purchase_price}
         purchaseDate={typedCar.purchase_date}
       />
+
+      <MarketComps summary={compSummary} carCurrentValue={currentValue > 0 ? currentValue : null} />
 
       <div className="grid gap-6 md:grid-cols-2">
         <AddPriceEntryForm carId={id} />

@@ -1,0 +1,39 @@
+name: Scrape BaT auction results
+
+on:
+  schedule:
+    # Daily at 09:15 UTC (~02:15 PT / ~05:15 ET).
+    # Off the top of the hour to avoid GitHub Actions scheduling backlogs.
+    - cron: '15 9 * * *'
+  workflow_dispatch:
+    inputs:
+      pages:
+        description: 'Number of result pages to fetch (36 listings each)'
+        required: false
+        default: '3'
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.3.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+
+      - name: Run scraper
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SCRAPE_PAGES: ${{ inputs.pages || '3' }}
+        run: pnpm scrape:bat
