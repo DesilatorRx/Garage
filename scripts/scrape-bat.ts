@@ -181,9 +181,25 @@ async function main() {
 
   console.log(`\nScraped ${rows.length} listings across ${Math.min(PAGES_TO_FETCH, pagesAvailable)} page(s).`)
 
+  // Pagination on BaT overlaps slightly — newly-closed auctions push older ones
+  // back, so the same id can land on consecutive pages within one run. Postgres
+  // rejects ON CONFLICT against duplicates inside a single statement, so dedupe
+  // here. Keep the first occurrence (earlier pages = more recent sales).
+  const seen = new Set<string>()
+  const dedupedRows: MarketSaleRow[] = []
+  for (const r of rows) {
+    const key = `${r.source}::${r.source_listing_id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    dedupedRows.push(r)
+  }
+  if (dedupedRows.length < rows.length) {
+    console.log(`Deduped ${rows.length - dedupedRows.length} cross-page duplicate(s).`)
+  }
+
   // Summary of brand matches before upsert
-  const matchedRows = rows.filter((r) => r.brand !== null)
-  console.log(`Brand-matched: ${matchedRows.length}/${rows.length}`)
+  const matchedRows = dedupedRows.filter((r) => r.brand !== null)
+  console.log(`Brand-matched: ${matchedRows.length}/${dedupedRows.length}`)
   const byBrand = new Map<string, number>()
   for (const r of matchedRows) {
     byBrand.set(r.brand!, (byBrand.get(r.brand!) ?? 0) + 1)
@@ -195,8 +211,8 @@ async function main() {
   // Upsert in batches
   const BATCH = 100
   let upserted = 0
-  for (let i = 0; i < rows.length; i += BATCH) {
-    const batch = rows.slice(i, i + BATCH)
+  for (let i = 0; i < dedupedRows.length; i += BATCH) {
+    const batch = dedupedRows.slice(i, i + BATCH)
     const { error } = await supabase
       .from('market_sales')
       .upsert(batch, { onConflict: 'source,source_listing_id' })
