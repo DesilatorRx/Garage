@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { GarageMark } from '@/components/garage-mark'
+import { BrandStrip } from '@/components/brand-strip'
 
 export default function Page() {
   const [email, setEmail] = useState('')
@@ -47,7 +48,7 @@ export default function Page() {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center bg-background p-6 md:p-10">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2 mb-4">
             <GarageMark className="h-16 w-auto" />
@@ -103,6 +104,7 @@ export default function Page() {
               </form>
             </CardContent>
           </Card>
+          <BrandStrip className="mt-4" />
         </div>
       </div>
     </div>

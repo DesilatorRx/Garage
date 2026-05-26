@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { GarageMark } from '@/components/garage-mark'
+import { BrandStrip } from '@/components/brand-strip'
 
 export default function Home() {
   return (
@@ -23,20 +24,7 @@ export default function Home() {
             <Link href="/auth/sign-up">Create Account</Link>
           </Button>
         </div>
-        <div className="mt-8 grid grid-cols-3 gap-8 text-center">
-          <div>
-            <p className="text-2xl font-bold text-foreground font-mono">6</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Brands</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-foreground font-mono">1948+</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Years Covered</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-primary font-mono">Daily</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Market Updates</p>
-          </div>
-        </div>
+        <BrandStrip className="mt-8" />
       </div>
     </main>
   )

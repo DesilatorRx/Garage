@@ -18,10 +18,10 @@ export function DashboardHeader() {
     <header className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded border border-primary/30">
-          <span className="text-sm font-bold text-primary font-serif">P</span>
+          <span className="text-sm font-bold text-primary font-serif">G</span>
         </div>
         <div>
-          <h1 className="text-lg font-semibold tracking-wide text-foreground">PORSCHE GARAGE</h1>
+          <h1 className="text-lg font-semibold tracking-wide text-foreground">THE GARAGE</h1>
           <p className="text-xs text-muted-foreground uppercase tracking-widest">Collection Tracker</p>
         </div>
       </div>
