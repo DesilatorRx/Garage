@@ -8,9 +8,14 @@ on:
   workflow_dispatch:
     inputs:
       pages:
-        description: 'Number of result pages to fetch (36 listings each)'
+        description: 'Pages to fetch (60 listings each). Ignored if "Full backfill" is checked.'
         required: false
         default: '3'
+      full_backfill:
+        description: 'Full backfill: fetch entire BaT sold-auction archive (~80 min, ~193k listings)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   scrape:
@@ -35,5 +40,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SCRAPE_PAGES: ${{ inputs.pages || '3' }}
+          # 99999 is intentionally absurd — the scraper self-limits when it
+          # hits BaT's reported pages_total (~3,222 at per_page=60).
+          SCRAPE_PAGES: ${{ (inputs.full_backfill && '99999') || inputs.pages || '3' }}
         run: pnpm scrape:bat
